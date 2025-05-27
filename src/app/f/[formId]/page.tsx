@@ -5,14 +5,11 @@ import { FormNodeData, FormEdgeData, FormSettings } from '@/types/form'
 import { UnifiedFormResponse } from '@/components/forms/unified-form-response'
 
 interface PublicFormPageProps {
-  searchParams: Promise<{ formId?: string }>
+  params: Promise<{ formId: string }>
 }
 
-export default async function PublicFormPage({
-  searchParams,
-}: PublicFormPageProps) {
-  const params = await searchParams
-  const formId = params?.formId
+export default async function PublicFormPage({ params }: PublicFormPageProps) {
+  const { formId } = await params
 
   console.log('Loading form:', formId)
 
