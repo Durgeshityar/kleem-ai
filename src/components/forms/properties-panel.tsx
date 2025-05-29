@@ -8,7 +8,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import { AlertCircle, Plus, Trash2, X } from 'lucide-react'
+import {
+  AlertCircle,
+  Plus,
+  Trash2,
+  X,
+  Image as ImageIcon,
+  Video,
+  FileText,
+} from 'lucide-react'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Switch } from '../ui/switch'
@@ -19,6 +27,7 @@ import {
   Condition,
   ComparisonOperator,
   QuestionType,
+  MediaType,
 } from '@/types/form'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 import { Card, CardContent } from '../ui/card'
@@ -26,6 +35,14 @@ import { Alert, AlertDescription } from '../ui/alert'
 import { Badge } from '../ui/badge'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../ui/accordion'
+import Image from 'next/image'
+import { UploadButton } from '@/lib/uploadthing'
 
 interface PropertiesPanelProps {
   selectedNode: Node<FormNodeData> | null
@@ -229,8 +246,13 @@ const ConditionBuilder = ({
   }
 
   return (
-    <Card className={cn('transition-colors', error ? 'border-red-200' : '')}>
-      <CardContent className="space-y-4 pt-4">
+    <Card
+      className={cn(
+        'transition-colors overflow-y-auto',
+        error ? 'border-red-200' : ''
+      )}
+    >
+      <CardContent className="space-y-4 pt-4 overflow-y-auto">
         {/* Natural language condition builder */}
         <div className="space-y-4">
           <div className="space-y-1">
@@ -342,6 +364,9 @@ const PropertiesPanel = ({
 }: PropertiesPanelProps) => {
   const [localNodeData, setLocalNodeData] = useState<FormNodeData | null>(null)
   const [localEdgeData, setLocalEdgeData] = useState<FormEdgeData | null>(null)
+  const [activeTab, setActiveTab] = useState<'conditions' | 'advanced'>(
+    'conditions'
+  )
 
   // Get source node type whenever selectedEdge changes
   const sourceNodeType = useMemo(() => {
@@ -364,6 +389,22 @@ const PropertiesPanel = ({
       setLocalNodeData(null)
     }
   }, [selectedNode, selectedEdge])
+
+  // Effect to handle mutual exclusivity between conditions and custom expression
+  useEffect(() => {
+    if (!localEdgeData) return
+
+    if (activeTab === 'advanced' && localEdgeData.customExpression) {
+      // If switching to advanced and there's a custom expression, clear conditions
+      handleEdgeDataChange('conditions', [])
+    } else if (
+      activeTab === 'conditions' &&
+      localEdgeData.conditions?.length > 0
+    ) {
+      // If switching to conditions and there are conditions, clear custom expression
+      handleEdgeDataChange('customExpression', '')
+    }
+  }, [activeTab])
 
   // Handle node data changes
   const handleNodeDataChange = <K extends keyof FormNodeData>(
@@ -514,8 +555,19 @@ const PropertiesPanel = ({
     }))
   }
 
+  const toggleMediaType = (type: MediaType) => {
+    if (!selectedNode || !localNodeData) return
+
+    const currentTypes = localNodeData.mediaTypes || []
+    const newTypes = currentTypes.includes(type)
+      ? currentTypes.filter((t) => t !== type)
+      : [...currentTypes, type]
+
+    handleNodeDataChange('mediaTypes', newTypes)
+  }
+
   return (
-    <div className="flex flex-col h-[100dvh] lg:h-full">
+    <div className="flex flex-col h-[100dvh] lg:h-full overflow-hidden">
       <div className="flex items-center justify-between p-4 lg:p-3 border-b border-gray-200 sticky top-0 bg-white z-10">
         <h3 className="text-base lg:text-sm font-medium text-gray-900 pl-0 lg:pl-14 [@media(min-width:792px)]:ml-10">
           {selectedNode ? 'Question Properties' : 'Connection Properties'}
@@ -530,7 +582,7 @@ const PropertiesPanel = ({
         </Button>
       </div>
 
-      <div className="p-4 lg:p-3 flex-1 overflow-y-auto pb-safe">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-3">
         {selectedNode && localNodeData && (
           <div className="space-y-5 lg:space-y-4 max-w-lg mx-auto lg:max-w-none">
             <div className="space-y-2">
@@ -546,6 +598,176 @@ const PropertiesPanel = ({
                 className="resize-none min-h-[100px] text-base lg:text-sm"
               />
             </div>
+
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="media">
+                <AccordionTrigger className="text-base lg:text-sm">
+                  Media Attachments
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4 pt-2">
+                    {/* Image Upload Section */}
+                    <Card>
+                      <CardContent className="pt-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <ImageIcon className="h-4 w-4" />
+                            <Label className="text-sm">Image Upload</Label>
+                          </div>
+                          <div className="flex-shrink-0">
+                            <UploadButton
+                              appearance={{
+                                button: 'px-2 py-1',
+                                allowedContent: 'hidden',
+                              }}
+                              endpoint="imageUploader"
+                              onClientUploadComplete={(res) => {
+                                if (res && res[0]) {
+                                  handleNodeDataChange('imageUrl', res[0].url)
+                                  toast.success('Image uploaded successfully')
+                                }
+                              }}
+                              onUploadError={(error: Error) => {
+                                toast.error(`Upload failed: ${error.message}`)
+                              }}
+                            />
+                          </div>
+                        </div>
+                        {localNodeData.imageUrl ? (
+                          <div className="relative aspect-video w-full bg-muted rounded-md overflow-hidden">
+                            <Image
+                              src={localNodeData.imageUrl}
+                              alt="Question media"
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 50vw"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2 z-10"
+                              onClick={() =>
+                                handleNodeDataChange('imageUrl', null)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="aspect-video w-full bg-muted rounded-md flex items-center justify-center text-sm text-muted-foreground">
+                            No image uploaded
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Supported formats: JPG, PNG, GIF (max 5MB)
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    {/* Video Embed Section */}
+                    <Card>
+                      <CardContent className="pt-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4" />
+                          <Label className="text-sm">Video</Label>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-full">
+                            <UploadButton
+                              appearance={{
+                                button: 'px-2 py-1',
+                                allowedContent: 'hidden',
+                              }}
+                              endpoint="videoUploader"
+                              onClientUploadComplete={(res) => {
+                                if (res && res[0]) {
+                                  handleNodeDataChange('videoUrl', res[0].url)
+                                  toast.success('Video uploaded successfully')
+                                }
+                              }}
+                              onUploadError={(error: Error) => {
+                                toast.error(`Upload failed: ${error.message}`)
+                              }}
+                            />
+                          </div>
+                          <Input
+                            placeholder=" Or paste YouTube, Vimeo, or other video URL"
+                            value={localNodeData.videoUrl || ''}
+                            onChange={(e) =>
+                              handleNodeDataChange('videoUrl', e.target.value)
+                            }
+                            className="text-sm flex-1"
+                          />
+                        </div>
+                        {localNodeData.videoUrl && (
+                          <div className="relative aspect-video w-full bg-muted rounded-md overflow-hidden">
+                            {localNodeData.videoUrl.includes('youtube.com') ||
+                            localNodeData.videoUrl.includes('youtu.be') ? (
+                              <iframe
+                                src={`https://www.youtube.com/embed/${
+                                  localNodeData.videoUrl.split('v=')[1] ||
+                                  localNodeData.videoUrl.split('youtu.be/')[1]
+                                }`}
+                                title="YouTube video player"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="absolute inset-0 w-full h-full"
+                              />
+                            ) : localNodeData.videoUrl.includes('vimeo.com') ? (
+                              <iframe
+                                src={`https://player.vimeo.com/video/${
+                                  localNodeData.videoUrl.split('vimeo.com/')[1]
+                                }`}
+                                title="Vimeo video player"
+                                allow="autoplay; fullscreen; picture-in-picture"
+                                allowFullScreen
+                                className="absolute inset-0 w-full h-full"
+                              />
+                            ) : localNodeData.videoUrl.startsWith(
+                                'https://'
+                              ) ? (
+                              <video
+                                src={localNodeData.videoUrl}
+                                controls
+                                className="absolute inset-0 w-full h-full"
+                                preload="metadata"
+                              >
+                                <source
+                                  src={localNodeData.videoUrl}
+                                  type="video/mp4"
+                                />
+                                Your browser does not support the video tag.
+                              </video>
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center flex-col gap-2">
+                                <Video className="h-8 w-8 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">
+                                  Video preview not available
+                                </p>
+                              </div>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2 z-10"
+                              onClick={() =>
+                                handleNodeDataChange('videoUrl', null)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Supports YouTube and Vimeo video URLs
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
             <div className="space-y-2">
               <Label htmlFor="type" className="text-base lg:text-sm">
@@ -574,6 +796,7 @@ const PropertiesPanel = ({
                   <SelectItem value="longText">Long Text</SelectItem>
                   <SelectItem value="boolean">Yes/No Toggle</SelectItem>
                   <SelectItem value="slider">Slider</SelectItem>
+                  <SelectItem value="media">Media</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -663,12 +886,74 @@ const PropertiesPanel = ({
                 </div>
               </div>
             )}
+
+            {localNodeData.type === 'media' && (
+              <div className="space-y-2">
+                <Label className="text-sm">Allowed Media Types</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={
+                      localNodeData.mediaTypes?.includes('image')
+                        ? 'default'
+                        : 'outline'
+                    }
+                    size="sm"
+                    onClick={() => toggleMediaType('image')}
+                    className="flex items-center gap-1.5"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    Image
+                  </Button>
+                  <Button
+                    variant={
+                      localNodeData.mediaTypes?.includes('video')
+                        ? 'default'
+                        : 'outline'
+                    }
+                    size="sm"
+                    onClick={() => toggleMediaType('video')}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Video className="h-4 w-4" />
+                    Video
+                  </Button>
+                  <Button
+                    variant={
+                      localNodeData.mediaTypes?.includes('pdf')
+                        ? 'default'
+                        : 'outline'
+                    }
+                    size="sm"
+                    onClick={() => toggleMediaType('pdf')}
+                    className="flex items-center gap-1.5"
+                  >
+                    <FileText className="h-4 w-4" />
+                    PDF
+                  </Button>
+                </div>
+                {(!localNodeData.mediaTypes ||
+                  localNodeData.mediaTypes.length === 0) && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Please select at least one media type
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {selectedEdge && localEdgeData && (
           <div className="space-y-5 lg:space-y-4 max-w-lg mx-auto lg:max-w-none">
-            <Tabs defaultValue="conditions" className="w-full">
+            <Tabs
+              defaultValue="conditions"
+              className="w-full"
+              onValueChange={(value) =>
+                setActiveTab(value as 'conditions' | 'advanced')
+              }
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="conditions">Conditions</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
@@ -679,9 +964,15 @@ const PropertiesPanel = ({
                   {/* Help text */}
                   <Alert>
                     <AlertDescription className="text-sm">
-                      Add conditions to control when this connection should be
-                      active. If no conditions are added, the connection will
-                      always be active.
+                      {localEdgeData.customExpression ? (
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          Please clear the custom expression in the Advanced tab
+                          before adding conditions.
+                        </div>
+                      ) : (
+                        'Add conditions to control when this connection should be active. If no conditions are added, the connection will always be active.'
+                      )}
                     </AlertDescription>
                   </Alert>
 
@@ -705,6 +996,7 @@ const PropertiesPanel = ({
                     size="sm"
                     onClick={addCondition}
                     className="w-full"
+                    disabled={!!localEdgeData.customExpression}
                   >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Add New Condition
@@ -780,9 +1072,9 @@ const PropertiesPanel = ({
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription className="text-sm ml-2">
-                        This section is for advanced users only. You can write
-                        custom JavaScript expressions to determine when this
-                        connection should be active.
+                        {localEdgeData.conditions?.length > 0
+                          ? 'Please remove all conditions from the Conditions tab before adding a custom expression.'
+                          : 'This section is for advanced users only. You can write custom JavaScript expressions to determine when this connection should be active.'}
                       </AlertDescription>
                     </Alert>
                     <div className="space-y-2">
@@ -797,6 +1089,7 @@ const PropertiesPanel = ({
                         }
                         className="font-mono text-sm min-h-[100px]"
                         placeholder="Example: formValues.rating > 3 && formValues.feedback.length > 0"
+                        disabled={localEdgeData.conditions?.length > 0}
                       />
                       <p className="text-xs text-gray-500">
                         Use formValues.questionName to access question answers.

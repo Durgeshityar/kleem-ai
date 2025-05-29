@@ -97,7 +97,6 @@ export function useFormBuilder({ onSave }: UseFormBuilderProps = {}) {
     [onSave]
   )
 
-  // Modify the debounced save function to be more specific
   const debouncedSave = useCallback(() => {
     if (!isDirty) return
 
@@ -113,7 +112,7 @@ export function useFormBuilder({ onSave }: UseFormBuilderProps = {}) {
       }
       saveFormToDatabase(formState)
       setIsDirty(false)
-    }, 1000) // 1 second debounce
+    }, 1000)
   }, [nodes, edges, settings, saveFormToDatabase, isDirty])
 
   // Update node operations to mark as dirty

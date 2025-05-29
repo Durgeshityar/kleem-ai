@@ -22,6 +22,7 @@ import {
   Calendar,
   ToggleLeft,
   Loader,
+  Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FormNodeData } from '@/types/form'
@@ -96,6 +97,10 @@ export default function FloatingToolbar({
           <DropdownMenuItem onClick={() => onAddNode('boolean')}>
             <ToggleLeft className="h-4 w-4 mr-2" />
             Yes/No Toggle
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onAddNode('media')}>
+            <Upload className="h-4 w-4 mr-2" />
+            Media Upload
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

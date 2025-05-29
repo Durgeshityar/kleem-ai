@@ -13,6 +13,7 @@
     "@auth/prisma-adapter": "^2.7.4",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.8.2",
+    "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.13",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
@@ -28,6 +29,7 @@
     "@radix-ui/react-tabs": "^1.1.11",
     "@radix-ui/react-toggle": "^1.1.8",
     "@radix-ui/react-tooltip": "^1.2.6",
+    "@uploadthing/react": "^7.3.1",
     "@xyflow/react": "^12.6.4",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
@@ -52,6 +54,7 @@
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "uploadthing": "^7.7.2",
     "uuid": "^11.0.3",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"

@@ -1,9 +1,9 @@
 'use client'
 
 import type React from 'react'
-
 import { useState, useRef } from 'react'
 import type { Node, Edge } from 'reactflow'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,9 +18,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+
 import { Check, Copy, Globe, Eye, EyeOff, Code } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import FormPreview from './form-preview'
+import FormPreview from './preview/form-preview'
 import type { FormSettings as FormSettingsType } from '@/types/form'
 
 interface FormSettingsProps {

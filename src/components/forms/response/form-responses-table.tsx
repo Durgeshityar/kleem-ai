@@ -371,7 +371,7 @@ export function FormResponsesTable({ searchParams }: FormResponsesTableProps) {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[625px] mx-4 sm:mx-0">
+                        <DialogContent className="sm:max-w-[625px] mx-4 sm:mx-0 max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle>Form Response Details</DialogTitle>
                             <DialogDescription>

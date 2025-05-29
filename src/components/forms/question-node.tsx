@@ -14,6 +14,7 @@ import {
   ToggleLeft,
   FileSlidersIcon as Slider,
   GripVertical,
+  Upload,
 } from 'lucide-react'
 import { FormNodeData } from '@/types/form'
 
@@ -37,6 +38,8 @@ const getTypeIcon = (type: string) => {
       return <ToggleLeft className="h-4 w-4" />
     case 'slider':
       return <Slider className="h-4 w-4" />
+    case 'media':
+      return <Upload className="h-4 w-4" />
     default:
       return <Type className="h-4 w-4" />
   }
@@ -60,6 +63,8 @@ const getTypeLabel = (type: string) => {
       return 'Yes/No'
     case 'slider':
       return 'Slider'
+    case 'media':
+      return 'Media Upload'
     default:
       return 'Text'
   }
@@ -114,6 +119,17 @@ function QuestionNodeComponent({
                   <span className="text-[10px] sm:text-xs">{option}</span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {data.type === 'media' && (
+            <div className="mt-2 border border-dashed border-gray-300 rounded-md p-2">
+              <div className="flex items-center justify-center gap-2">
+                <Upload className="h-3 w-3 text-gray-400" />
+                <span className="text-[10px] sm:text-xs text-gray-500">
+                  Upload media here
+                </span>
+              </div>
             </div>
           )}
         </CardContent>

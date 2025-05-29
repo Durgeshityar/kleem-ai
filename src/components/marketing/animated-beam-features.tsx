@@ -1,6 +1,6 @@
 'use client'
 
-import React, { forwardRef, useRef } from 'react'
+import React, { forwardRef, useRef, useState, useEffect } from 'react'
 
 import { cn } from '@/lib/utils'
 import { AnimatedBeam } from '@/components/ui/animated-beam'
@@ -134,14 +134,26 @@ export function AnimatedBeamDemo() {
   const div1Ref = useRef<HTMLDivElement>(null)
   const div2Ref = useRef<HTMLDivElement>(null)
   const div3Ref = useRef<HTMLDivElement>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+
+    handleResize() // Initial check
+    window.addEventListener('resize', handleResize)
+
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   return (
     <div
       className="relative flex min-h-[600px] w-full max-w-[1200px] items-center justify-center overflow-hidden p-4 sm:min-h-[500px] sm:p-10 md:p-20"
       ref={containerRef}
     >
-      <div className="flex size-full flex-col items-stretch justify-between gap-8 sm:gap-16 md:gap-20">
-        <div className="flex flex-col items-center justify-center gap-8 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex size-full flex-col items-center justify-between gap-8 sm:gap-16 md:gap-32">
+        <div className="flex flex-col items-center justify-center gap-12 sm:flex-row sm:items-center sm:justify-between sm:gap-16">
           <Circle ref={div1Ref}>
             <Icons.user className="h-6 w-6 sm:h-8 sm:w-8" />
           </Circle>
@@ -160,7 +172,7 @@ export function AnimatedBeamDemo() {
           toRef={div2Ref}
           startYOffset={0}
           endYOffset={0}
-          curvature={window?.innerWidth < 640 ? 100 : 0}
+          curvature={isMobile ? 100 : 0}
         />
 
         <AnimatedBeam
@@ -169,7 +181,7 @@ export function AnimatedBeamDemo() {
           toRef={div3Ref}
           startYOffset={0}
           endYOffset={0}
-          curvature={window?.innerWidth < 640 ? -100 : 0}
+          curvature={isMobile ? -100 : 0}
         />
       </div>
     </div>

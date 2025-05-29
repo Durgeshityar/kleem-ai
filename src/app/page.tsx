@@ -99,9 +99,9 @@ export default function Home() {
                   </Avatar>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="font-medium">200+ forms created</p>
+                  <p className="text-sm sm:text-base">200+ forms created</p>
                   <span className="text-gray-600">•</span>
-                  <p className="text-gray-600 flex items-center gap-1">
+                  <p className="text-sm sm:text-base text-gray-600 flex items-center gap-1">
                     <Signal className="h-4 w-4" /> Verifiable by Analytics
                   </p>
                 </div>
@@ -112,7 +112,7 @@ export default function Home() {
       </section>
 
       {/* Browser Demo Section */}
-      <section className="py-24">
+      <section id="features" className="py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <BrowserFrame />
         </div>
@@ -136,7 +136,7 @@ export default function Home() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section className="mt-16 sm:mt-24 lg:mt-32">
+      <section id="testimonials" className="mt-16 sm:mt-24 lg:mt-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-start gap-6 sm:gap-8">
             {/* Section Header */}
@@ -203,7 +203,7 @@ export default function Home() {
       </section>
 
       {/* PRICING */}
-      <section className="py-24 sm:py-32">
+      <section id="pricing" className="py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">

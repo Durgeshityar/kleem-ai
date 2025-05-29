@@ -1,5 +1,7 @@
 import { Node, Edge } from 'reactflow'
 
+export type MediaType = 'image' | 'video' | 'pdf'
+
 export type QuestionType =
   | 'text'
   | 'multipleChoice'
@@ -9,6 +11,7 @@ export type QuestionType =
   | 'rating'
   | 'slider'
   | 'longText'
+  | 'media'
 
 export interface FormNodeData {
   question: string
@@ -17,6 +20,10 @@ export interface FormNodeData {
   variableName: string
   helpText?: string
   options?: string[]
+  imageUrl?: string | null
+  videoUrl?: string | null // For both uploaded videos and embedded videos
+  pdfUrl?: string | null // For PDF files
+  mediaTypes?: MediaType[] // Allowed media types for media questions
 }
 
 export type ComparisonOperator =
@@ -43,18 +50,15 @@ export interface Condition {
 export interface FormEdgeData {
   conditions: Condition[]
   logicalOperator: LogicalOperator
-  customExpression?: string // For advanced users who want to write custom JS conditions
+  customExpression?: string
 }
 
 export interface FormSettings {
   formId: string
   formName: string
   startNodeId: string
-  /** Indicates whether the form is publicly accessible */
   isPublished: boolean
-  /** Primary theme colour used in the rendered form */
   primaryColor: string
-  /** Whether to show "Powered by Kleem AI" footer */
   showBranding: boolean
 }
 

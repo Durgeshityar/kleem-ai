@@ -1,13 +1,15 @@
 /* trunk-ignore-all(prettier) */
 /* eslint-disable @typescript-eslint/no-require-imports */
 import type { Config } from 'tailwindcss'
+import { withUt } from 'uploadthing/tw'
 
-export default {
+export default withUt({
   darkMode: ['class'],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{ts,tsx,mdx}',
   ],
   theme: {
     extend: {
@@ -68,8 +70,30 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        'accordion-down': {
+          from: {
+            height: '0',
+          },
+          to: {
+            height: 'var(--radix-accordion-content-height)',
+          },
+        },
+        'accordion-up': {
+          from: {
+            height: 'var(--radix-accordion-content-height)',
+          },
+          to: {
+            height: '0',
+          },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
+      },
     },
   },
 
   plugins: [require('tailwindcss-animate')],
-} satisfies Config
+} satisfies Config)

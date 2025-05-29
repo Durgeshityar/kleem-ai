@@ -2,7 +2,7 @@
 
 import type React from 'react'
 import type { Node, Edge } from 'reactflow'
-import { UnifiedFormResponse } from './unified-form-response'
+import { UnifiedFormResponse } from '../unified-form-response'
 
 interface FormPreviewProps {
   nodes: Node[]

@@ -1,5 +1,5 @@
 import { Button } from '../../ui/button'
-import FormPreview from '../form-preview'
+import FormPreview from './form-preview'
 import { Node, Edge } from 'reactflow'
 import { FormSettings } from '@/types/form'
 import { findStartNode } from '@/utils/form-utils'

@@ -30,6 +30,9 @@ import {
   SendIcon,
   AlertCircleIcon,
   RefreshCcwIcon,
+  ImageIcon,
+  Video,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -37,6 +40,8 @@ import { toast } from 'sonner'
 import { submitFormResponse, checkEmailSubmission } from '@/actions/form'
 import { findNextNode } from '@/utils/form-utils'
 import { generateConversationalResponse } from '@/utils/openai-utils'
+import { UploadButton } from '@/lib/uploadthing'
+import Image from 'next/image'
 
 type QuestionType =
   | 'text'
@@ -47,8 +52,126 @@ type QuestionType =
   | 'boolean'
   | 'dropdown'
   | 'slider'
+  | 'media'
 
 type FormValue = string | number | boolean | Date
+
+interface Message {
+  id: string
+  type: 'system' | 'user'
+  content: React.ReactNode
+  questionNode?: Node<FormNodeData>
+  variableName?: string
+  value?: FormValue
+  inputType?: QuestionType | undefined
+  isTyping?: boolean
+  originalQuestion?: string
+}
+
+interface ValidationError {
+  field: string
+  message: string
+}
+
+// Add this component after the Message interface and before UnifiedFormResponse
+const MediaRenderer = ({
+  imageUrl,
+  videoUrl,
+  pdfUrl,
+}: {
+  imageUrl?: string | null
+  videoUrl?: string | null
+  pdfUrl?: string | null
+}) => {
+  if (!imageUrl && !videoUrl && !pdfUrl) return null
+
+  return (
+    <div className="mt-3 space-y-3">
+      {imageUrl && (
+        <div className="rounded-lg overflow-hidden aspect-video relative">
+          <Image
+            src={imageUrl}
+            alt="Question media"
+            className="absolute inset-0 w-full h-full object-cover"
+            width={100}
+            height={100}
+          />
+        </div>
+      )}
+      {videoUrl && (
+        <div className="rounded-lg overflow-hidden aspect-video">
+          {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
+            <iframe
+              src={videoUrl.replace('watch?v=', 'embed/')}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          ) : (
+            <video
+              src={videoUrl}
+              controls
+              className="w-full h-full"
+              preload="metadata"
+            >
+              Your browser does not support the video tag.
+            </video>
+          )}
+        </div>
+      )}
+      {pdfUrl && (
+        <div className="rounded-lg overflow-hidden border border-gray-200">
+          <div className="bg-gray-50 p-3 flex items-center justify-between border-b">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">
+                PDF Document
+              </span>
+            </div>
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            >
+              <span>Download</span>
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+            </a>
+          </div>
+          <div className="bg-white">
+            <iframe
+              src={`${pdfUrl}#toolbar=0`}
+              className="w-full h-[400px] border-0"
+              title="PDF Preview"
+            />
+          </div>
+          <div className="bg-gray-50 p-2 text-center border-t">
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-600 hover:text-gray-800"
+            >
+              Open in new tab for full view
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface UnifiedFormResponseProps {
   nodes: Node<FormNodeData>[]
@@ -71,23 +194,6 @@ interface UnifiedFormResponseProps {
     restrictFeatures?: boolean
     useAI?: boolean
   }
-}
-
-interface Message {
-  id: string
-  type: 'system' | 'user'
-  content: React.ReactNode
-  questionNode?: Node<FormNodeData>
-  variableName?: string
-  value?: FormValue
-  inputType?: QuestionType
-  isTyping?: boolean
-  originalQuestion?: string
-}
-
-interface ValidationError {
-  field: string
-  message: string
 }
 
 export function UnifiedFormResponse({
@@ -144,37 +250,23 @@ export function UnifiedFormResponse({
     useAI: customStyles?.useAI ?? true,
   }
 
-  // Validate input based on node configuration
-  const validateInput = useCallback(
-    (value: FormValue, node: Node<FormNodeData>): ValidationError | null => {
-      const { type, required } = node.data
-
-      if (
-        required &&
-        (!value || (typeof value === 'string' && value.trim() === ''))
-      ) {
-        return {
-          field: node.data.variableName,
-          message: 'This field is required',
+  // Helper: replace placeholders like [user_name] with actual answers
+  const replacePlaceholders = useCallback(
+    (text: string): string => {
+      if (!text) return text
+      return text.replace(/\[(\w+)\]/g, (_, key: string) => {
+        const rawVal = formValues[key]
+        if (rawVal === undefined) return ''
+        if (rawVal instanceof Date) {
+          return format(rawVal, 'PPP')
         }
-      }
-
-      // Basic validation for text types
-      if (type === 'text' || type === 'longText') {
-        const stringValue = String(value)
-
-        // Basic length checks for live mode
-        if (mode === 'live' && stringValue.length > 10000) {
-          return {
-            field: node.data.variableName,
-            message: 'Text is too long (maximum 10,000 characters)',
-          }
+        if (typeof rawVal === 'boolean') {
+          return rawVal ? 'Yes' : 'No'
         }
-      }
-
-      return null
+        return String(rawVal)
+      })
     },
-    [mode]
+    [formValues]
   )
 
   // Reset the form to initial state
@@ -222,9 +314,9 @@ export function UnifiedFormResponse({
       if (resolvedStyles.useAI) {
         try {
           const contextInfo = `
-            Original Question: "${startNode.data.question}"
-            Form Name: "${resolvedStyles.formTitle || 'this form'}"
-            Mode: "${mode}"
+            Original Question: ${startNode.data.question}
+            Form Name: ${resolvedStyles.formTitle || 'this form'}
+            Mode: ${mode}
             
             Instructions:
             1. Create a warm, brief greeting (1-2 sentences max)
@@ -234,11 +326,11 @@ export function UnifiedFormResponse({
             5. Keep the conversational tone light and friendly
             
             Example format:
-            "Hi! 👋 ${
+            Hi! 👋 ${
               mode === 'live'
                 ? `Welcome to ${resolvedStyles.formTitle || 'this form'}`
                 : 'Great to meet you'
-            }. ${startNode.data.question}"
+            }. ${startNode.data.question}
           `
 
           const aiResponse = await generateConversationalResponse(
@@ -259,7 +351,7 @@ export function UnifiedFormResponse({
           content: <p>{welcomeMessage}</p>,
           questionNode: startNode,
           variableName: startNode.data.variableName,
-          inputType: startNode.data.type,
+          inputType: startNode.data.type as QuestionType | undefined,
           originalQuestion: startNode.data.question,
         },
       ])
@@ -461,7 +553,7 @@ export function UnifiedFormResponse({
         content: <p>{welcomeMessage}</p>,
         questionNode: startNode,
         variableName: startNode.data.variableName,
-        inputType: startNode.data.type,
+        inputType: startNode.data.type as QuestionType | undefined,
         originalQuestion: startNode.data.question,
       },
     ])
@@ -493,10 +585,14 @@ export function UnifiedFormResponse({
     const originalQuestion = node.data.question
     const processedQuestion = replacePlaceholders(originalQuestion)
 
-    // Get previous interactions for context
-    const previousMessage = messages[messages.length - 2]
-    const previousAnswer = previousMessage?.value
-    const previousQuestion = previousMessage?.originalQuestion
+    // Get previous interactions for enhanced context
+    const lastThreeMessages = messages.slice(-6) // Get last 3 QA pairs
+    const previousInteractions = lastThreeMessages.map((msg) => ({
+      type: msg.type,
+      question: msg.originalQuestion,
+      answer: msg.value,
+      variableName: msg.variableName,
+    }))
 
     // Add typing indicator message
     setMessages((prev) => [
@@ -524,68 +620,58 @@ export function UnifiedFormResponse({
       },
     ])
 
-    let conversationalPrefix = ''
+    let conversationalResponse = ''
 
-    // Create natural transitions based on previous answer
-    if (resolvedStyles.useAI && previousAnswer !== undefined) {
+    // Create contextual transitions based on previous interactions
+    if (resolvedStyles.useAI && previousInteractions.length > 0) {
       try {
         const contextInfo = `
-          Previous question: "${previousQuestion}"
-          Previous answer: "${previousAnswer}"
-          Current question: "${originalQuestion}"
+          Previous Interactions: ${JSON.stringify(
+            previousInteractions,
+            null,
+            2
+          )}
+          Current Question: "${originalQuestion}"
+          Form Name: "${resolvedStyles.formTitle || 'this form'}"
+          Question Number: ${currentQuestionIndex}
+          Total Questions: ${totalQuestions}
           
           Instructions:
-          1. Create a VERY brief transition (1-2 words or a short phrase)
-          2. The transition should acknowledge their previous answer naturally
-          3. MUST be followed by the EXACT original question
-          4. DO NOT rephrase or modify the original question
-          5. DO NOT add explanations or options
+          1. Create a natural, contextual response that flows from previous answers
+          2. Reference relevant previous answers if they relate to the current question
+          3. Keep the tone warm and engaging
+          4. MUST include the EXACT original question
+          5. DO NOT modify or rephrase the original question
+          6. Keep the response concise (2-3 sentences max)
+          7. If previous answers suggest a pattern or theme, acknowledge it subtly
           
-          Good examples:
-          - "Great! ${originalQuestion}"
-          - "Thanks! ${originalQuestion}" 
-          - "Got it. ${originalQuestion}"
-          - "Perfect. ${originalQuestion}"
-          - "Excellent choice! ${originalQuestion}"
-          
-          Bad examples:
-          - Adding extra context or rephrasing the question
-          - Explaining what the question means
-          - Mentioning the available options
+          Example formats:
+          - If building on previous answer: "I see! Based on your interest in [previous topic], let me ask: ${originalQuestion}"
+          - If transitioning to a new topic: "Now, let's explore a different aspect. ${originalQuestion}"
+          - If following up on related info: "That's helpful context! To understand better: ${originalQuestion}"
         `
 
         const response = await generateConversationalResponse(
-          `Create a brief transition to: ${originalQuestion}`,
+          `Create a contextual response leading to: ${originalQuestion}`,
           contextInfo
         )
 
         // Ensure the response includes the original question
         if (!response.includes(originalQuestion)) {
-          conversationalPrefix = response + ' '
+          conversationalResponse = response + ' ' + originalQuestion
         } else {
-          conversationalPrefix = response.replace(originalQuestion, '')
+          conversationalResponse = response
         }
       } catch (error) {
-        console.error('Error generating transition:', error)
-        conversationalPrefix = 'Thanks! '
+        console.error('Error generating contextual response:', error)
+        conversationalResponse = processedQuestion
       }
     } else {
-      // Default transitions without AI
-      const transitions = [
-        'Great!',
-        'Thanks!',
-        'Got it.',
-        'Perfect.',
-        'Awesome!',
-      ]
-      conversationalPrefix =
-        transitions[Math.floor(Math.random() * transitions.length)] + ' '
+      conversationalResponse = processedQuestion
     }
 
-    const finalMessage = `${conversationalPrefix}${processedQuestion}`
-
-    // Add a natural typing delay
-    const typingDelay = Math.min(1500, finalMessage.length * 20)
+    // Add a natural typing delay based on message length
+    const typingDelay = Math.min(1500, conversationalResponse.length * 20)
 
     setTimeout(() => {
       setMessages((prev) =>
@@ -593,10 +679,19 @@ export function UnifiedFormResponse({
           msg.id === uniqueId
             ? {
                 ...msg,
-                content: <p>{finalMessage}</p>,
+                content: (
+                  <>
+                    <p>{conversationalResponse}</p>
+                    <MediaRenderer
+                      imageUrl={node.data.imageUrl}
+                      videoUrl={node.data.videoUrl}
+                      pdfUrl={node.data.pdfUrl}
+                    />
+                  </>
+                ),
                 questionNode: node,
                 variableName: node.data.variableName,
-                inputType: node.data.type,
+                inputType: node.data.type as QuestionType | undefined,
                 isTyping: false,
                 originalQuestion: originalQuestion,
               }
@@ -657,6 +752,18 @@ export function UnifiedFormResponse({
             <span>{sliderValue}%</span>
           </div>
         )
+        break
+      case 'media':
+        // Special handling for PDF uploads
+        if (
+          typeof value === 'string' &&
+          (value.toLowerCase().includes('.pdf') ||
+            (node.data.mediaTypes && node.data.mediaTypes.includes('pdf')))
+        ) {
+          displayValue = <MediaRenderer pdfUrl={value} />
+        } else {
+          displayValue = String(value)
+        }
         break
       default:
         displayValue = String(value)
@@ -1331,28 +1438,187 @@ export function UnifiedFormResponse({
           </div>
         )
 
+      case 'media':
+        const allowedTypes = currentNode.data.mediaTypes || []
+        return (
+          <div className="space-y-4">
+            {/* Media type badges */}
+            <div className="flex flex-wrap gap-2">
+              {allowedTypes.map((type) => (
+                <div
+                  key={type}
+                  className="px-2 py-1 bg-gray-100 rounded-md text-sm flex items-center gap-1.5"
+                >
+                  {type === 'image' && <ImageIcon className="h-3.5 w-3.5" />}
+                  {type === 'video' && <Video className="h-3.5 w-3.5" />}
+                  {type === 'pdf' && <FileText className="h-3.5 w-3.5" />}
+                  {type}
+                </div>
+              ))}
+            </div>
+
+            {/* Upload buttons */}
+            <div className="space-y-3">
+              {allowedTypes.includes('image') && (
+                <div className="space-y-2">
+                  <UploadButton
+                    endpoint="imageUploader"
+                    appearance={{
+                      button:
+                        'w-full py-2.5 px-3 text-sm font-semibold rounded-md bg-gray-50 text-gray-900 border border-gray-200 hover:bg-gray-100 flex items-center justify-center gap-2',
+                      allowedContent: 'text-xs text-gray-500 mt-1',
+                    }}
+                    content={{
+                      button({ ready }) {
+                        return (
+                          <>
+                            <ImageIcon className="h-4 w-4" />
+                            {ready ? 'Upload Image' : 'Loading...'}
+                          </>
+                        )
+                      },
+                    }}
+                    onClientUploadComplete={(res) => {
+                      if (res && res[0]) {
+                        handleSubmit(res[0].url)
+                        toast.success('Image uploaded successfully')
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      toast.error(`Upload failed: ${error.message}`)
+                    }}
+                  />
+                </div>
+              )}
+
+              {allowedTypes.includes('video') && (
+                <div className="space-y-2">
+                  <UploadButton
+                    endpoint="videoUploader"
+                    appearance={{
+                      button:
+                        'w-full py-2.5 px-3 text-sm font-semibold rounded-md bg-gray-50 text-gray-900 border border-gray-200 hover:bg-gray-100 flex items-center justify-center gap-2',
+                      allowedContent: 'text-xs text-gray-500 mt-1',
+                    }}
+                    content={{
+                      button({ ready }) {
+                        return (
+                          <>
+                            <Video className="h-4 w-4" />
+                            {ready ? 'Upload Video' : 'Loading...'}
+                          </>
+                        )
+                      },
+                    }}
+                    onClientUploadComplete={(res) => {
+                      if (res && res[0]) {
+                        handleSubmit(res[0].url)
+                        toast.success('Video uploaded successfully')
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      toast.error(`Upload failed: ${error.message}`)
+                    }}
+                  />
+                  <div className="relative">
+                    <Input
+                      placeholder="Or paste a YouTube/Vimeo URL"
+                      value={currentInput}
+                      onChange={(e) => setCurrentInput(e.target.value)}
+                      className="pr-16"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="absolute right-1 top-1 h-7"
+                      onClick={() => handleSubmit(currentInput)}
+                      disabled={!currentInput}
+                      style={{ backgroundColor: resolvedStyles.primaryColor }}
+                    >
+                      Submit
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {allowedTypes.includes('pdf') && (
+                <div className="space-y-2">
+                  <UploadButton
+                    endpoint="pdfUploader"
+                    appearance={{
+                      button:
+                        'w-full py-2.5 px-3 text-sm font-semibold rounded-md bg-gray-50 text-gray-900 border border-gray-200 hover:bg-gray-100 flex items-center justify-center gap-2',
+                      allowedContent: 'text-xs text-gray-500 mt-1',
+                    }}
+                    content={{
+                      button({ ready }) {
+                        return (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            {ready ? 'Upload PDF' : 'Loading...'}
+                          </>
+                        )
+                      },
+                    }}
+                    onClientUploadComplete={(res) => {
+                      if (res && res[0]) {
+                        handleSubmit(res[0].url)
+                        toast.success('PDF uploaded successfully')
+                      }
+                    }}
+                    onUploadError={(error: Error) => {
+                      toast.error(`Upload failed: ${error.message}`)
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Help text */}
+            <p className="text-sm text-gray-500">
+              {allowedTypes.length === 1
+                ? `Only ${allowedTypes[0]} files are accepted`
+                : `Accepted file types: ${allowedTypes.join(', ')}`}
+            </p>
+          </div>
+        )
+
       default:
         return <div>Unsupported question type: {type}</div>
     }
   }
 
-  // Helper: replace placeholders like [user_name] with actual answers
-  const replacePlaceholders = useCallback(
-    (text: string): string => {
-      if (!text) return text
-      return text.replace(/\[(\w+)\]/g, (_, key: string) => {
-        const rawVal = formValues[key]
-        if (rawVal === undefined) return ''
-        if (rawVal instanceof Date) {
-          return format(rawVal, 'PPP')
+  // Validate input based on node configuration
+  const validateInput = useCallback(
+    (value: FormValue, node: Node<FormNodeData>): ValidationError | null => {
+      const { type, required } = node.data
+
+      if (
+        required &&
+        (!value || (typeof value === 'string' && value.trim() === ''))
+      ) {
+        return {
+          field: node.data.variableName,
+          message: 'This field is required',
         }
-        if (typeof rawVal === 'boolean') {
-          return rawVal ? 'Yes' : 'No'
+      }
+
+      // Basic validation for text types
+      if (type === 'text' || type === 'longText') {
+        const stringValue = String(value)
+
+        // Basic length checks for live mode
+        if (mode === 'live' && stringValue.length > 10000) {
+          return {
+            field: node.data.variableName,
+            message: 'Text is too long (maximum 10,000 characters)',
+          }
         }
-        return String(rawVal)
-      })
+      }
+
+      return null
     },
-    [formValues]
+    [mode]
   )
 
   // Dynamic Review Message Component (live mode only)
@@ -1656,6 +1922,13 @@ export function UnifiedFormResponse({
                 }
               >
                 {message.content}
+                {message.type === 'system' && message.questionNode && (
+                  <MediaRenderer
+                    imageUrl={message.questionNode.data.imageUrl}
+                    videoUrl={message.questionNode.data.videoUrl}
+                    pdfUrl={message.questionNode.data.pdfUrl}
+                  />
+                )}
 
                 {/* Chat bubble pointer */}
                 <div

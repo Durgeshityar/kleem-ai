@@ -16,6 +16,7 @@ export const FormNodeDataSchema = z.object({
       'date',
       'rating',
       'slider',
+      'media',
     ],
     {
       errorMap: () => ({ message: 'Invalid question type selected' }),
@@ -40,6 +41,30 @@ export const FormNodeDataSchema = z.object({
     .optional()
     .refine((options) => !options || options.length > 0, {
       message: 'Options array cannot be empty when provided',
+    }),
+  imageUrl: z
+    .string()
+    .url('Image URL must be a valid URL')
+    .max(1000, 'Image URL must be less than 1000 characters')
+    .nullable()
+    .optional(),
+  videoUrl: z
+    .string()
+    .url('Video URL must be a valid URL')
+    .max(1000, 'Video URL must be less than 1000 characters')
+    .nullable()
+    .optional(),
+  pdfUrl: z
+    .string()
+    .url('PDF URL must be a valid URL')
+    .max(1000, 'PDF URL must be less than 1000 characters')
+    .nullable()
+    .optional(),
+  mediaTypes: z
+    .array(z.enum(['image', 'video', 'pdf']))
+    .optional()
+    .refine((types) => !types || types.length > 0, {
+      message: 'At least one media type must be selected',
     }),
 })
 

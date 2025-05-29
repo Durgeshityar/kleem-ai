@@ -250,7 +250,7 @@ export const MockFormEditor = () => {
 
   if (isInitializing) {
     return (
-      <div className="min-h-[100dvh] w-full flex items-center justify-center bg-[#FAFBFD]">
+      <div className=" w-full flex items-center justify-center bg-[#FAFBFD]">
         <div className="text-gray-500 text-sm sm:text-base">
           Initializing mock form editor...
         </div>
@@ -259,7 +259,7 @@ export const MockFormEditor = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col bg-[#FAFBFD] overflow-hidden">
+    <div className=" w-full flex flex-col bg-[#FAFBFD] overflow-hidden">
       <main className="flex-1 w-full relative">
         <MockFormBuilder
           nodes={nodes}

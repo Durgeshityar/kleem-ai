@@ -1,4 +1,4 @@
-import { generateConversationalResponse } from '@/app/api/openai/actions'
+import { generateConversationalResponse } from '@/actions/openai/actions'
 
 export { generateConversationalResponse }
 

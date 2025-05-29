@@ -215,7 +215,11 @@ export function FormCard({
             </button>
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 border-t"
+              className={`flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-gray-50 border-t ${
+                form.isPublished
+                  ? 'text-gray-700'
+                  : 'text-gray-400 cursor-not-allowed'
+              }`}
             >
               {linkCopied ? (
                 <>
@@ -224,8 +228,12 @@ export function FormCard({
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4" />
-                  Copy Link
+                  <Copy
+                    className={`w-4 h-4 ${
+                      !form.isPublished ? 'opacity-50' : ''
+                    }`}
+                  />
+                  {form.isPublished ? 'Copy Link' : 'Publish to Copy Link'}
                 </>
               )}
             </button>
