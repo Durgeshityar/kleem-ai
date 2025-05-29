@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { LoginButton } from '@/components/auth/login-button'
-import { Menu, X } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import {
   Sheet,

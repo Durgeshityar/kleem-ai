@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { currentUser } from '@/lib/auth-util'
 import { redirect } from 'next/navigation'
 import { FormResponsesHeader } from '@/components/forms/response/form-responses-header'
-import { FormResponsesTable } from '@/components/forms/form-responses-table'
+import { FormResponsesTable } from '@/components/forms/response/form-responses-table'
 import { FormResponsesTableSkeleton } from '@/components/forms/response/form-responses-table-skeleton'
 
 interface PageProps {
